@@ -1,0 +1,74 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "v1.81-alttpr*"
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build_linux_x64:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Make out dir
+      run: mkdir ${{github.workspace}}/out
+    - name: Configure CMake
+      run: cmake -S ${{github.workspace}}/src -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config Release
+    - name: Rename
+      run: mv ${{github.workspace}}/build/asar/asar-standalone ${{github.workspace}}/build/asar/asar
+    - name: Archive
+      run: 7z a ${{github.workspace}}/out/asar-linux.7z ${{github.workspace}}/build/asar/asar ${{github.workspace}}/build/asar/libasar.so
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{github.workspace}}/out/asar-linux.7z
+
+  build_macos_x64:
+    name: Build MacOS x64
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Make out dir
+      run: mkdir ${{github.workspace}}/out
+    - name: Configure CMake
+      run: cmake -S ${{github.workspace}}/src -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config Release
+    - name: Rename
+      run: mv ${{github.workspace}}/build/asar/asar-standalone ${{github.workspace}}/build/asar/asar
+    - name: Archive
+      run: 7z a ${{github.workspace}}/out/asar-macos-x64.7z ${{github.workspace}}/build/asar/asar ${{github.workspace}}/build/asar/libasar.dylib
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{github.workspace}}/out/asar-macos-x64.7z
+
+  build_windows:
+    name: Build Windows
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v2
+    - name: Make out dir
+      run: mkdir ${{github.workspace}}\out
+
+    - name: Configure CMake
+      run: cmake -S ${{github.workspace}}\src -B ${{github.workspace}}\build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -G "Visual Studio 16 2019" -T v142
+    - name: Build
+      run: cmake --build ${{github.workspace}}\build --config Release
+    - name: Rename
+      run: ren ${{github.workspace}}\build\asar\Release\asar-standalone.exe asar.exe
+    - name: Archive
+      run: 7z a ${{github.workspace}}\out\asar-windows.zip ${{github.workspace}}\build\asar\Release\asar.exe ${{github.workspace}}\build\asar\Release\asar.dll
+    - name: Release
+      uses: softprops/action-gh-release@v0.1.13
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{github.workspace}}\out\asar-windows.zip
